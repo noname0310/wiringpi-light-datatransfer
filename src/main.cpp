@@ -35,82 +35,48 @@ void busyWait(std::chrono::system_clock::time_point end) {
     }
 }
 
+bool computeParity(const char* bytes, uint8_t size) {
+    uint8_t parity = 0;
+    for (int32_t i = 0; i < size; ++i) {
+        char byte = bytes[i];
+        for (int32_t j = 0; j < 8; ++j) {
+            parity ^= (byte >> j) & 0x01;
+        }
+    }
+    return parity;
+}
+
 class SerialSender {
     int32_t delay;
 
 public:
-    SerialSender(int32_t baudrate = 9) : delay(ONE_SECOND_IN_MICROSECONDS / baudrate) {
-        pinMode(OUTPUT_PIN, OUTPUT);
-        digitalWrite(OUTPUT_PIN, SEND_SIGNAL_FALSE);
-    }
+    SerialSender(int32_t baudrate = 9) : delay(ONE_SECOND_IN_MICROSECONDS / baudrate) { }
 
     void send(const std::string& message) {
-        for (char c : message) {
-            sendByte(c);
-        }
-    }
-
-    void fastSend(const std::string& message) {
         sendBytesAsChunk(message.c_str(), message.size());
     }
 
 private:
-    void sendByte(char byte) {
-        auto start = std::chrono::high_resolution_clock::now();
-        auto next = start;
-
-        // Start bit
-        digitalWrite(OUTPUT_PIN, SEND_SIGNAL_TRUE);
-        next += std::chrono::microseconds(delay);
-        busyWait(next);
-
-        // Data bits
-        for (int32_t i = 0; i < 8; ++i) {
-            bool bit = (byte >> i) & 0x01;
-            digitalWrite(OUTPUT_PIN, bit ? SEND_SIGNAL_TRUE : SEND_SIGNAL_FALSE);
-#ifdef DEBUG_PRINT_BITS
-            std::cout << (bit ? '1' : '0');
-            std::flush(std::cout);
-#endif
-            next += std::chrono::microseconds(delay);
-            busyWait(next);
-        }
-
-        // Stop bits
-        digitalWrite(OUTPUT_PIN, SEND_SIGNAL_FALSE);
-        next += std::chrono::microseconds(delay * STOP_BITS);
-        busyWait(next);
-    }
-
     void sendBytes(const char* bytes, uint8_t size) {
         assert(size <= MAX_CHUNK_SIZE);
-        
-        auto start = std::chrono::high_resolution_clock::now();
-        auto next = start;
-        
-        // Start bit
-        digitalWrite(OUTPUT_PIN, SEND_SIGNAL_TRUE);
-        next += std::chrono::microseconds(delay);
-        busyWait(next);
 
-        // Data bits
-        {
-            // Data length
-            for (int32_t i = 0; i < LENGTH_BITS; ++i) {
-                bool bit = (size >> i) & 0x01;
-                digitalWrite(OUTPUT_PIN, bit ? SEND_SIGNAL_TRUE : SEND_SIGNAL_FALSE);
-#ifdef DEBUG_PRINT_BITS
-                std::cout << (bit ? '1' : '0');
-                std::flush(std::cout);
-#endif
-                next += std::chrono::microseconds(delay);
-                busyWait(next);
-            }
+        bool error = false;
+        do {
+            error = false;
 
-            // Data
-            for (int32_t i = 0; i < size; ++i) {
-                for (int32_t j = 0; j < 8; ++j) {
-                    bool bit = (bytes[i] >> j) & 0x01;
+            auto start = std::chrono::high_resolution_clock::now();
+            auto next = start;
+            
+            // Start bit
+            digitalWrite(OUTPUT_PIN, SEND_SIGNAL_TRUE);
+            next += std::chrono::microseconds(delay);
+            busyWait(next);
+
+            // Data bits
+            {
+                // Data length
+                for (int32_t i = 0; i < LENGTH_BITS; ++i) {
+                    bool bit = (size >> i) & 0x01;
                     digitalWrite(OUTPUT_PIN, bit ? SEND_SIGNAL_TRUE : SEND_SIGNAL_FALSE);
 #ifdef DEBUG_PRINT_BITS
                     std::cout << (bit ? '1' : '0');
@@ -119,13 +85,45 @@ private:
                     next += std::chrono::microseconds(delay);
                     busyWait(next);
                 }
-            }
-        }
 
-        // Stop bits
-        digitalWrite(OUTPUT_PIN, SEND_SIGNAL_FALSE);
-        next += std::chrono::microseconds(delay * STOP_BITS);
-        busyWait(next);
+                // Data
+                for (int32_t i = 0; i < size; ++i) {
+                    for (int32_t j = 0; j < 8; ++j) {
+                        bool bit = (bytes[i] >> j) & 0x01;
+                        digitalWrite(OUTPUT_PIN, bit ? SEND_SIGNAL_TRUE : SEND_SIGNAL_FALSE);
+#ifdef DEBUG_PRINT_BITS
+                        std::cout << (bit ? '1' : '0');
+                        std::flush(std::cout);
+#endif
+                        next += std::chrono::microseconds(delay);
+                        busyWait(next);
+                    }
+                }
+            }
+
+            // Parity
+            bool parity = computeParity(bytes, size);
+            digitalWrite(OUTPUT_PIN, parity ? SEND_SIGNAL_TRUE : SEND_SIGNAL_FALSE);
+#ifdef DEBUG_PRINT_BITS
+            std::cout << (parity ? '1' : '0');
+            std::flush(std::cout);
+#endif
+            next += std::chrono::microseconds(delay);
+            busyWait(next);
+
+            // Stop bits (wait for error flag)
+            digitalWrite(OUTPUT_PIN, SEND_SIGNAL_FALSE);
+            next += std::chrono::microseconds(delay * STOP_BITS);
+            while (std::chrono::high_resolution_clock::now() < next) {
+                // busy wait
+                bool bit = digitalRead(INPUT_PIN) == RECEIVE_SIGNAL_TRUE;
+                if (bit) {
+                    error = true;
+                    std::cout << "Error detected, resend chunk" << std::endl;
+                    std::flush(std::cout);
+                }
+            }
+        } while (error);
     }
 
     void sendBytesAsChunk(const char* bytes, uint32_t size) {
@@ -143,19 +141,9 @@ class SerialReceiver {
     int32_t delay;
 
 public:
-    SerialReceiver(int32_t baudrate = 9) : delay(ONE_SECOND_IN_MICROSECONDS / baudrate) {
-        pinMode(INPUT_PIN, INPUT);
-    }
+    SerialReceiver(int32_t baudrate = 9) : delay(ONE_SECOND_IN_MICROSECONDS / baudrate) { }
 
     void receive() {
-        for (; ;) {
-            char byte = receiveByte();
-            std::cout << byte;
-            std::flush(std::cout);
-        }
-    }
-
-    void fastReceive() {
         for (; ;) {
             char bytes[MAX_CHUNK_SIZE];
             //uint8_t size = 
@@ -171,73 +159,30 @@ public:
     }
 
 private:
-    char receiveByte() {
-        // Wait for start bit
-        while (digitalRead(INPUT_PIN) == RECEIVE_SIGNAL_FALSE) {
-            // busy wait
-        }
-
-        auto start = std::chrono::high_resolution_clock::now();
-        auto next = start;
-
-        // Wait Start bit
-        next += std::chrono::microseconds(delay + delay / 3);
-        busyWait(next);
-
-        // Data bits
-        char byte = 0;
-        for (int i = 0; i < 8; ++i) {
-            bool bit = digitalRead(INPUT_PIN) == RECEIVE_SIGNAL_TRUE;
-            byte |= bit << i;
-#ifdef DEBUG_PRINT_BITS
-            std::cout << (bit ? '1' : '0');
-            std::flush(std::cout);
-#endif
-            next += std::chrono::microseconds(delay);
-            busyWait(next);
-        }
-
-        // Stop bit start wait
-        next += std::chrono::microseconds(delay / 2);
-        busyWait(next);
-
-        return byte;
-    }
-
     uint8_t receiveBytes(char* bytes, std::function<void(char)> callback) {
-        // Wait for start bit
-        while (digitalRead(INPUT_PIN) == RECEIVE_SIGNAL_FALSE) {
-            // busy wait
-        }
+        bool error = false;
+        do {
+            error = false;
 
-        auto start = std::chrono::high_resolution_clock::now();
-        auto next = start;
-
-        // Wait Start bit
-        next += std::chrono::microseconds(delay + delay / 3);
-        busyWait(next);
-
-        // Data bits
-        uint8_t size = 0;
-        {
-            // Data length
-            for (int32_t i = 0; i < LENGTH_BITS; ++i) {
-                bool bit = digitalRead(INPUT_PIN) == RECEIVE_SIGNAL_TRUE;
-                size |= bit << i;
-#ifdef DEBUG_PRINT_BITS
-                std::cout << (bit ? '1' : '0');
-                std::flush(std::cout);
-#endif
-                next += std::chrono::microseconds(delay);
-                busyWait(next);
+            // Wait for start bit
+            while (digitalRead(INPUT_PIN) == RECEIVE_SIGNAL_FALSE) {
+                // busy wait
             }
-            std::memset(bytes, 0, size);
 
-            // Data
-            for (int32_t i = 0; i < size; ++i) {
-                for (int32_t j = 0; j < 8; ++j) {
+            auto start = std::chrono::high_resolution_clock::now();
+            auto next = start;
+
+            // Wait Start bit
+            next += std::chrono::microseconds(delay + delay / 3);
+            busyWait(next);
+
+            // Data bits
+            uint8_t size = 0;
+            {
+                // Data length
+                for (int32_t i = 0; i < LENGTH_BITS; ++i) {
                     bool bit = digitalRead(INPUT_PIN) == RECEIVE_SIGNAL_TRUE;
-                    bytes[i] |= bit << j;
+                    size |= bit << i;
 #ifdef DEBUG_PRINT_BITS
                     std::cout << (bit ? '1' : '0');
                     std::flush(std::cout);
@@ -245,9 +190,43 @@ private:
                     next += std::chrono::microseconds(delay);
                     busyWait(next);
                 }
-                callback(bytes[i]);
+                std::memset(bytes, 0, size);
+
+                // Data
+                for (int32_t i = 0; i < size; ++i) {
+                    for (int32_t j = 0; j < 8; ++j) {
+                        bool bit = digitalRead(INPUT_PIN) == RECEIVE_SIGNAL_TRUE;
+                        bytes[i] |= bit << j;
+#ifdef DEBUG_PRINT_BITS
+                        std::cout << (bit ? '1' : '0');
+                        std::flush(std::cout);
+#endif
+                        next += std::chrono::microseconds(delay);
+                        busyWait(next);
+                    }
+                    callback(bytes[i]);
+                }
             }
-        }
+
+            // Parity
+            bool bit = digitalRead(INPUT_PIN) == RECEIVE_SIGNAL_TRUE;
+#ifdef DEBUG_PRINT_BITS
+            std::cout << (bit ? '1' : '0');
+            std::flush(std::cout);
+#endif
+            bool parity = computeParity(bytes, size);
+            if (parity != bit) {
+                digitalWrite(OUTPUT_PIN, SEND_SIGNAL_TRUE);
+                std::cout << "Parity error detected, request resend" << std::endl;
+                std::flush(std::cout);
+                next += std::chrono::microseconds(delay + (delay * STOP_BITS / 2);
+                busyWait(next);
+                digitalWrite(OUTPUT_PIN, SEND_SIGNAL_FALSE);
+                error = true;
+            }
+        } while (error);
+        next += std::chrono::microseconds(delay);
+        busyWait(next);
 
         // Stop bit start wait
         next += std::chrono::microseconds(delay / 2);
@@ -262,20 +241,17 @@ enum class Role : int32_t {
     RECEIVER
 };
 
-enum class Mode : int32_t {
-    PERBYTE,
-    CHUNK,
-};
-
 int32_t main(int32_t argc, char* argv[]) {
-    // program [role] [baudrate] [mode]
+    // program [role] [baudrate]
     Role role = argc > 1 ? static_cast<Role>(std::stoi(argv[1])) : Role::SENDER;
     int32_t baudrate = argc > 2 ? std::stoi(argv[2]) : 30;
-    Mode mode = argc > 3 ? static_cast<Mode>(std::stoi(argv[3])) : Mode::PERBYTE;
 
     if (wiringPiSetup() == -1) {
         return 1;
     }
+    pinMode(OUTPUT_PIN, OUTPUT);
+    digitalWrite(OUTPUT_PIN, SEND_SIGNAL_FALSE);
+    pinMode(INPUT_PIN, INPUT);
     std::cout << "Setup wiringPi" << std::endl;
 
     if (role == Role::SENDER) {
@@ -286,19 +262,11 @@ int32_t main(int32_t argc, char* argv[]) {
             std::getline(std::cin, message);
             message.push_back('\n');
 
-            if (mode == Mode::PERBYTE) {
-                sender.send(message);
-            } else {
-                sender.fastSend(message);
-            }
+            sender.send(message);
         }
     } else {
         SerialReceiver receiver(baudrate);
-        if (mode == Mode::PERBYTE) {
-            receiver.receive();
-        } else {
-            receiver.fastReceive();
-        }
+        receiver.receive();
     }
 
     return 0;
