@@ -160,6 +160,9 @@ public:
 
 private:
     uint8_t receiveBytes(char* bytes, std::function<void(char)> callback) {
+        std::chrono::system_clock::time_point next;
+        uint8_t size = 0;
+
         bool error = false;
         do {
             error = false;
@@ -170,14 +173,13 @@ private:
             }
 
             auto start = std::chrono::high_resolution_clock::now();
-            auto next = start;
+            next = start;
 
             // Wait Start bit
             next += std::chrono::microseconds(delay + delay / 3);
             busyWait(next);
 
             // Data bits
-            uint8_t size = 0;
             {
                 // Data length
                 for (int32_t i = 0; i < LENGTH_BITS; ++i) {
