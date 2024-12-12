@@ -252,6 +252,8 @@ int32_t main(int32_t argc, char* argv[]) {
             std::string message;
             std::cout << "Enter message: ";
             std::getline(std::cin, message);
+            message.push_back('\n');
+
             if (mode == Mode::PERBYTE) {
                 sender.send(message);
             } else {
