@@ -119,7 +119,7 @@ private:
                 bool bit = digitalRead(INPUT_PIN) == RECEIVE_SIGNAL_TRUE;
                 if (bit) {
                     error = true;
-                    std::cout << "Error detected, resend chunk" << std::endl;
+                    std::cout << "Error detected, resend chunk\n";
                     std::flush(std::cout);
                 }
             }
@@ -145,7 +145,7 @@ public:
 
     void receive() {
         for (; ;) {
-            std::cout << "-------------------waiting for message-------------------" << std::endl;
+            std::cout << "\n-------------------waiting for message-------------------\n";
             char bytes[MAX_CHUNK_SIZE];
             //uint8_t size = 
             receiveBytes(bytes, [](char byte) {
@@ -156,7 +156,7 @@ public:
             //     std::cout << bytes[i];
             // }
             // std::flush(std::cout);
-            std::cout << "-------------------message received-------------------" << std::endl;
+            std::cout << "\n-------------------message received-------------------\n";
         }
     }
 
@@ -221,7 +221,7 @@ private:
             bool parity = computeParity(bytes, size);
             if (parity != bit) {
                 digitalWrite(OUTPUT_PIN, SEND_SIGNAL_TRUE);
-                std::cout << "Parity error detected, request resend" << std::endl;
+                std::cout << "\n---Parity error detected, request resend\n";
                 std::flush(std::cout);
                 next += std::chrono::microseconds(delay + (delay * STOP_BITS / 2));
                 busyWait(next);
@@ -256,7 +256,7 @@ int32_t main(int32_t argc, char* argv[]) {
     pinMode(OUTPUT_PIN, OUTPUT);
     digitalWrite(OUTPUT_PIN, SEND_SIGNAL_FALSE);
     pinMode(INPUT_PIN, INPUT);
-    std::cout << "Setup wiringPi" << std::endl;
+    std::cout << "Setup wiringPi\n";
 
     if (role == Role::SENDER) {
         SerialSender sender(baudrate);
