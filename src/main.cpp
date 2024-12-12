@@ -202,6 +202,8 @@ private:
                 next += std::chrono::microseconds(delay);
                 busyWait(next);
             }
+            std::cout << "size: " << size << std::endl;
+            std::flush(std::cout);
 
             // Data
             for (int32_t i = 0; i < size; ++i) {
