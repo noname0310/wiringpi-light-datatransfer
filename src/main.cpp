@@ -4,7 +4,10 @@
 #include <cstdint>
 #include <cstring>
 #include <functional>
+#include <cassert>
 #include <wiringPi.h>
+
+#define DEBUG_PRINT_BITS
 
 constexpr int32_t INPUT_PIN = 22;
 constexpr int32_t OUTPUT_PIN = 22;
@@ -18,6 +21,9 @@ constexpr int32_t SEND_SIGNAL_FALSE = LOW;
 
 constexpr int32_t RECEIVE_SIGNAL_TRUE = LOW;
 constexpr int32_t RECEIVE_SIGNAL_FALSE = HIGH;
+
+constexpr int32_t LENGTH_BITS = 5;
+constexpr int32_t MAX_CHUNK_SIZE = 31;
 
 //         __data__
 // 0000000110101010000110101010000
@@ -62,6 +68,10 @@ private:
         for (int32_t i = 0; i < 8; ++i) {
             bool bit = (byte >> i) & 0x01;
             digitalWrite(OUTPUT_PIN, bit ? SEND_SIGNAL_TRUE : SEND_SIGNAL_FALSE);
+#ifdef DEBUG_PRINT_BITS
+            std::cout << (bit ? '1' : '0');
+            std::flush(std::cout);
+#endif
             next += std::chrono::microseconds(delay);
             busyWait(next);
         }
@@ -73,6 +83,8 @@ private:
     }
 
     void sendBytes(const char* bytes, uint8_t size) {
+        assert(size <= MAX_CHUNK_SIZE);
+        
         auto start = std::chrono::high_resolution_clock::now();
         auto next = start;
         
@@ -84,9 +96,13 @@ private:
         // Data bits
         {
             // Data length
-            for (int32_t i = 0; i < 8; ++i) {
+            for (int32_t i = 0; i < LENGTH_BITS; ++i) {
                 bool bit = (size >> i) & 0x01;
                 digitalWrite(OUTPUT_PIN, bit ? SEND_SIGNAL_TRUE : SEND_SIGNAL_FALSE);
+#ifdef DEBUG_PRINT_BITS
+                std::cout << (bit ? '1' : '0');
+                std::flush(std::cout);
+#endif
                 next += std::chrono::microseconds(delay);
                 busyWait(next);
             }
@@ -96,6 +112,10 @@ private:
                 for (int32_t j = 0; j < 8; ++j) {
                     bool bit = (bytes[i] >> j) & 0x01;
                     digitalWrite(OUTPUT_PIN, bit ? SEND_SIGNAL_TRUE : SEND_SIGNAL_FALSE);
+#ifdef DEBUG_PRINT_BITS
+                    std::cout << (bit ? '1' : '0');
+                    std::flush(std::cout);
+#endif
                     next += std::chrono::microseconds(delay);
                     busyWait(next);
                 }
@@ -111,7 +131,7 @@ private:
     void sendBytesAsChunk(const char* bytes, uint32_t size) {
         const char* offset = bytes;
         while (0 < size) {
-            uint32_t chunk = size < 255 ? size : 255;
+            uint32_t chunk = size < MAX_CHUNK_SIZE ? size : MAX_CHUNK_SIZE;
             sendBytes(offset, chunk);
             offset += chunk;
             size -= chunk;
@@ -137,7 +157,7 @@ public:
 
     void fastReceive() {
         for (; ;) {
-            char bytes[255];
+            char bytes[MAX_CHUNK_SIZE];
             //uint8_t size = 
             receiveBytes(bytes, [](char byte) {
                 std::cout << byte;
@@ -169,6 +189,10 @@ private:
         for (int i = 0; i < 8; ++i) {
             bool bit = digitalRead(INPUT_PIN) == RECEIVE_SIGNAL_TRUE;
             byte |= bit << i;
+#ifdef DEBUG_PRINT_BITS
+            std::cout << (bit ? '1' : '0');
+            std::flush(std::cout);
+#endif
             next += std::chrono::microseconds(delay);
             busyWait(next);
         }
@@ -197,9 +221,13 @@ private:
         uint8_t size = 0;
         {
             // Data length
-            for (int32_t i = 0; i < 8; ++i) {
+            for (int32_t i = 0; i < LENGTH_BITS; ++i) {
                 bool bit = digitalRead(INPUT_PIN) == RECEIVE_SIGNAL_TRUE;
                 size |= bit << i;
+#ifdef DEBUG_PRINT_BITS
+                std::cout << (bit ? '1' : '0');
+                std::flush(std::cout);
+#endif
                 next += std::chrono::microseconds(delay);
                 busyWait(next);
             }
@@ -210,6 +238,10 @@ private:
                 for (int32_t j = 0; j < 8; ++j) {
                     bool bit = digitalRead(INPUT_PIN) == RECEIVE_SIGNAL_TRUE;
                     bytes[i] |= bit << j;
+#ifdef DEBUG_PRINT_BITS
+                    std::cout << (bit ? '1' : '0');
+                    std::flush(std::cout);
+#endif
                     next += std::chrono::microseconds(delay);
                     busyWait(next);
                 }
@@ -238,7 +270,7 @@ enum class Mode : int32_t {
 int32_t main(int32_t argc, char* argv[]) {
     // program [role] [baudrate] [mode]
     Role role = argc > 1 ? static_cast<Role>(std::stoi(argv[1])) : Role::SENDER;
-    int32_t baudrate = argc > 2 ? std::stoi(argv[2]) : 38;
+    int32_t baudrate = argc > 2 ? std::stoi(argv[2]) : 30;
     Mode mode = argc > 3 ? static_cast<Mode>(std::stoi(argv[3])) : Mode::PERBYTE;
 
     if (wiringPiSetup() == -1) {
