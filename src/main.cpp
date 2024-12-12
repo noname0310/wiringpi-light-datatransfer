@@ -2,6 +2,7 @@
 #include <string>
 #include <chrono>
 #include <cstdint>
+#include <cstring>
 #include <functional>
 #include <wiringPi.h>
 
