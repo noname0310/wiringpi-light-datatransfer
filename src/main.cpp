@@ -198,21 +198,16 @@ private:
             // Data length
             for (int32_t i = 0; i < 8; ++i) {
                 bool bit = digitalRead(INPUT_PIN) == RECEIVE_SIGNAL_TRUE;
-                std::cout << (bit ? "1" : "0");
-                std::flush(std::cout);
                 size |= bit << i;
                 next += std::chrono::microseconds(delay);
                 busyWait(next);
             }
-            std::cout << "size: " << static_cast<int32_t>(size) << std::endl;
-            std::flush(std::cout);
+            std::memset(bytes, 0, size);
 
             // Data
             for (int32_t i = 0; i < size; ++i) {
                 for (int32_t j = 0; j < 8; ++j) {
                     bool bit = digitalRead(INPUT_PIN) == RECEIVE_SIGNAL_TRUE;
-                    std::cout << (bit ? "1" : "0");
-                    std::flush(std::cout);
                     bytes[i] |= bit << j;
                     next += std::chrono::microseconds(delay);
                     busyWait(next);
