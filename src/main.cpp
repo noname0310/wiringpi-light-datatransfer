@@ -9,7 +9,7 @@
 
 // #define DEBUG_PRINT_BITS
 
-constexpr int32_t INPUT_PIN = 22;
+constexpr int32_t INPUT_PIN = 21;
 constexpr int32_t OUTPUT_PIN = 22;
 
 constexpr int32_t ONE_SECOND_IN_MICROSECONDS = 1000000;
