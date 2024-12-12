@@ -263,9 +263,15 @@ int32_t main(int32_t argc, char* argv[]) {
         for (; ;) {
             std::string message;
             std::cout << "Enter message: ";
-            std::getline(std::cin, message);
-            message.push_back('\n');
-
+            
+            std::string message_part;
+            for (; ;) {
+                std::getline(std::cin, message_part);
+                if (message_part == "EOF") {
+                    break;
+                }
+                message += message_part;
+            }
             sender.send(message);
         }
     } else {
