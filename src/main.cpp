@@ -14,7 +14,7 @@ constexpr int32_t OUTPUT_PIN = 22;
 
 constexpr int32_t ONE_SECOND_IN_MICROSECONDS = 1000000;
 
-constexpr int32_t STOP_BITS = 1;
+constexpr int32_t STOP_BITS = 2;
 
 constexpr int32_t SEND_SIGNAL_TRUE = HIGH;
 constexpr int32_t SEND_SIGNAL_FALSE = LOW;
@@ -22,8 +22,8 @@ constexpr int32_t SEND_SIGNAL_FALSE = LOW;
 constexpr int32_t RECEIVE_SIGNAL_TRUE = LOW;
 constexpr int32_t RECEIVE_SIGNAL_FALSE = HIGH;
 
-constexpr int32_t LENGTH_BITS = 5;
-constexpr int32_t MAX_CHUNK_SIZE = 31;
+constexpr int32_t LENGTH_BITS = 6;
+constexpr int32_t MAX_CHUNK_SIZE = 63;
 
 //         __data__
 // 0000000110101010000110101010000
@@ -145,6 +145,7 @@ public:
 
     void receive() {
         for (; ;) {
+            std::cout << "-------------------waiting for message-------------------" << std::endl;
             char bytes[MAX_CHUNK_SIZE];
             //uint8_t size = 
             receiveBytes(bytes, [](char byte) {
@@ -155,6 +156,7 @@ public:
             //     std::cout << bytes[i];
             // }
             // std::flush(std::cout);
+            std::cout << "-------------------message received-------------------" << std::endl;
         }
     }
 
