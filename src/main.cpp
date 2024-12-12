@@ -118,9 +118,11 @@ private:
                 // busy wait
                 bool bit = digitalRead(INPUT_PIN) == RECEIVE_SIGNAL_TRUE;
                 if (bit) {
-                    error = true;
-                    std::cout << "Error detected, resend chunk\n";
-                    std::flush(std::cout);
+                    if (!error) {
+                        error = true;
+                        std::cout << "Error detected, resend chunk\n";
+                        std::flush(std::cout);
+                    }
                 }
             }
         } while (error);
@@ -267,10 +269,11 @@ int32_t main(int32_t argc, char* argv[]) {
             std::string message_part;
             for (; ;) {
                 std::getline(std::cin, message_part);
-                if (message_part == "EOF") {
+                if (message_part.empty()) {
                     break;
                 }
                 message += message_part;
+                message += '\n';
             }
             sender.send(message);
         }
