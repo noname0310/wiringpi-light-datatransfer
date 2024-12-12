@@ -22,8 +22,8 @@ constexpr int32_t SEND_SIGNAL_FALSE = LOW;
 constexpr int32_t RECEIVE_SIGNAL_TRUE = LOW;
 constexpr int32_t RECEIVE_SIGNAL_FALSE = HIGH;
 
-constexpr int32_t LENGTH_BITS = 6;
-constexpr int32_t MAX_CHUNK_SIZE = 63;
+constexpr int32_t LENGTH_BITS = 8;
+constexpr int32_t MAX_CHUNK_SIZE = 255;
 
 //         __data__
 // 0000000110101010000110101010000
