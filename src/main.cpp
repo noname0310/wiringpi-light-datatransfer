@@ -5,6 +5,8 @@
 #include <cstring>
 #include <functional>
 #include <cassert>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <wiringPi.h>
 
 // #define DEBUG_PRINT_BITS
@@ -259,6 +261,8 @@ int32_t main(int32_t argc, char* argv[]) {
     digitalWrite(OUTPUT_PIN, SEND_SIGNAL_FALSE);
     pinMode(INPUT_PIN, INPUT);
     std::cout << "Setup wiringPi\n";
+
+    setpriority(PRIO_PROCESS, 0, -20);
 
     if (role == Role::SENDER) {
         SerialSender sender(baudrate);
