@@ -149,14 +149,15 @@ public:
         for (; ;) {
             std::cout << "\n-------------------waiting for message-------------------\n";
             char bytes[MAX_CHUNK_SIZE];
-            uint8_t size = receiveBytes(bytes, [](char byte) {
-                // std::cout << byte;
-                // std::flush(std::cout);
+            //uint8_t size = 
+            receiveBytes(bytes, [](char byte) {
+                std::cout << byte;
+                std::flush(std::cout);
             });
-            for (int32_t i = 0; i < size; ++i) {
-                std::cout << bytes[i];
-            }
-            std::flush(std::cout);
+            // for (int32_t i = 0; i < size; ++i) {
+            //     std::cout << bytes[i];
+            // }
+            // std::flush(std::cout);
             std::cout << "\n-------------------message received-------------------\n";
         }
     }
