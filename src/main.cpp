@@ -38,7 +38,7 @@ public:
     }
 
     void send(const std::string& message) {
-        for (int8_t c : message) {
+        for (char c : message) {
             sendByte(c);
         }
     }
@@ -48,7 +48,7 @@ public:
     }
 
 private:
-    void sendByte(int8_t byte) {
+    void sendByte(char byte) {
         auto start = std::chrono::high_resolution_clock::now();
         auto next = start;
 
@@ -71,7 +71,7 @@ private:
         busyWait(next);
     }
 
-    void sendBytes(const int8_t* bytes, uint8_t size) {
+    void sendBytes(const char* bytes, uint8_t size) {
         auto start = std::chrono::high_resolution_clock::now();
         auto next = start;
         
@@ -107,8 +107,8 @@ private:
         busyWait(next);
     }
 
-    void sendBytesAsChunk(const int8_t* bytes, uint32_t size) {
-        const int8_t* offset = bytes;
+    void sendBytesAsChunk(const char* bytes, uint32_t size) {
+        const char* offset = bytes;
         while (0 < size) {
             uint32_t chunk = size < 255 ? size : 255;
             sendBytes(offset, chunk);
@@ -128,7 +128,7 @@ public:
 
     void receive() {
         for (; ;) {
-            int8_t byte = receiveByte();
+            char byte = receiveByte();
             std::cout << byte;
             std::flush(std::cout);
         }
@@ -136,8 +136,8 @@ public:
 
     void fastReceive() {
         for (; ;) {
-            int8_t bytes[255];
-            uint8_t size = receiveBytes(bytes, [](int8_t byte) {
+            char bytes[255];
+            uint8_t size = receiveBytes(bytes, [](char byte) {
                 std::cout << byte;
                 std::flush(std::cout);
             });
@@ -178,7 +178,7 @@ private:
         return byte;
     }
 
-    uint8_t receiveBytes(int8_t* bytes, std::function<void(int8_t)> callback) {
+    uint8_t receiveBytes(char* bytes, std::function<void(char)> callback) {
         // Wait for start bit
         while (digitalRead(INPUT_PIN) == RECEIVE_SIGNAL_FALSE) {
             // busy wait
@@ -232,7 +232,7 @@ enum class Mode : int32_t {
     CHUNK,
 }
 
-int32_t main(int32_t argc, int8_t* argv[]) {
+int32_t main(int32_t argc, char* argv[]) {
     // program [role] [baudrate] [mode]
     Role role = argc > 1 ? static_cast<Role>(std::stoi(argv[1])) : Role::SENDER;
     int32_t baudrate = argc > 2 ? std::stoi(argv[2]) : 38;
