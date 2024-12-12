@@ -219,7 +219,7 @@ private:
                 digitalWrite(OUTPUT_PIN, SEND_SIGNAL_TRUE);
                 std::cout << "Parity error detected, request resend" << std::endl;
                 std::flush(std::cout);
-                next += std::chrono::microseconds(delay + (delay * STOP_BITS / 2);
+                next += std::chrono::microseconds(delay + (delay * STOP_BITS / 2));
                 busyWait(next);
                 digitalWrite(OUTPUT_PIN, SEND_SIGNAL_FALSE);
                 error = true;
