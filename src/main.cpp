@@ -265,12 +265,19 @@ int32_t main(int32_t argc, char* argv[]) {
         for (; ;) {
             std::string message;
             std::cout << "Enter message: ";
+
+            int32_t empty_string = 0;
             
             std::string message_part;
             for (; ;) {
                 std::getline(std::cin, message_part);
                 if (message_part.empty()) {
-                    break;
+                    empty_string += 1;
+                    if (empty_string == 3) {
+                        break;
+                    }
+                } else {
+                    empty_string = 0;
                 }
                 message += message_part;
                 message += '\n';
