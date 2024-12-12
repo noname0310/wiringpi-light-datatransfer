@@ -202,7 +202,7 @@ private:
                 next += std::chrono::microseconds(delay);
                 busyWait(next);
             }
-            std::cout << "size: " << size << std::endl;
+            std::cout << "size: " << static_cast<int32_t>(size) << std::endl;
             std::flush(std::cout);
 
             // Data
