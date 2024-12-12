@@ -137,7 +137,8 @@ public:
     void fastReceive() {
         for (; ;) {
             char bytes[255];
-            uint8_t size = receiveBytes(bytes, [](char byte) {
+            //uint8_t size = 
+            receiveBytes(bytes, [](char byte) {
                 std::cout << byte;
                 std::flush(std::cout);
             });
@@ -230,7 +231,7 @@ enum class Role : int32_t {
 enum class Mode : int32_t {
     PERBYTE,
     CHUNK,
-}
+};
 
 int32_t main(int32_t argc, char* argv[]) {
     // program [role] [baudrate] [mode]
