@@ -50,13 +50,13 @@ bool computeParity(const char* bytes, uint8_t size) {
 
 class SerialSender {
     int32_t delay;
-    bool debug;
+    bool debugMode;
 
 public:
-    SerialSender(int32_t baudrate = 9, bool debug = false) : delay(ONE_SECOND_IN_MICROSECONDS / baudrate, debug(debug)) { }
+    SerialSender(int32_t baudrate = 9, bool debugMode = false) : delay(ONE_SECOND_IN_MICROSECONDS / baudrate, debugMode(debugMode)) { }
 
     void send(const std::string& message) {
-        if (debug) {
+        if (debugMode) {
             // padding
             std::string padded = message;
             while (padded.size() % MAX_CHUNK_SIZE != 0) {
@@ -153,10 +153,10 @@ private:
 
 class SerialReceiver {
     int32_t delay;
-    bool debug;
+    bool debugMode;
 
 public:
-    SerialReceiver(int32_t baudrate = 9, bool debug = false) : delay(ONE_SECOND_IN_MICROSECONDS / baudrate), debug(debug) { }
+    SerialReceiver(int32_t baudrate = 9, bool debugMode = false) : delay(ONE_SECOND_IN_MICROSECONDS / baudrate), debugMode(debugMode) { }
 
     void receive() {
         for (; ;) {
@@ -209,7 +209,7 @@ private:
                     next += std::chrono::microseconds(delay);
                     busyWait(next);
                 }
-                if (debug) {
+                if (debugMode) {
                     size = MAX_CHUNK_SIZE;
                 }
                 std::memset(bytes, 0, size);
