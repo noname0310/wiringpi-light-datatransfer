@@ -50,12 +50,22 @@ bool computeParity(const char* bytes, uint8_t size) {
 
 class SerialSender {
     int32_t delay;
+    bool debug;
 
 public:
-    SerialSender(int32_t baudrate = 9) : delay(ONE_SECOND_IN_MICROSECONDS / baudrate) { }
+    SerialSender(int32_t baudrate = 9, bool debug) : delay(ONE_SECOND_IN_MICROSECONDS / baudrate, debug(debug)) { }
 
     void send(const std::string& message) {
-        sendBytesAsChunk(message.c_str(), message.size());
+        if (debug) {
+            // padding
+            std::string padded = message;
+            while (padded.size() % MAX_CHUNK_SIZE != 0) {
+                padded += ' ';
+            }
+            sendBytesAsChunk(padded.c_str(), padded.size());
+        } else {
+            sendBytesAsChunk(message.c_str(), message.size());
+        }
     }
 
 private:
@@ -143,9 +153,10 @@ private:
 
 class SerialReceiver {
     int32_t delay;
+    bool debug;
 
 public:
-    SerialReceiver(int32_t baudrate = 9) : delay(ONE_SECOND_IN_MICROSECONDS / baudrate) { }
+    SerialReceiver(int32_t baudrate = 9, bool debug) : delay(ONE_SECOND_IN_MICROSECONDS / baudrate), debug(debug) { }
 
     void receive() {
         for (; ;) {
@@ -197,6 +208,9 @@ private:
 #endif
                     next += std::chrono::microseconds(delay);
                     busyWait(next);
+                }
+                if (debug) {
+                    size = MAX_CHUNK_SIZE;
                 }
                 std::memset(bytes, 0, size);
 
@@ -250,9 +264,10 @@ enum class Role : int32_t {
 };
 
 int32_t main(int32_t argc, char* argv[]) {
-    // program [role] [baudrate]
+    // program [role] [baudrate] [debug]
     Role role = argc > 1 ? static_cast<Role>(std::stoi(argv[1])) : Role::SENDER;
     int32_t baudrate = argc > 2 ? std::stoi(argv[2]) : 30;
+    bool debug = argc > 3 ? std::stoi(argv[3]) : false;
 
     if (wiringPiSetup() == -1) {
         return 1;
@@ -265,7 +280,7 @@ int32_t main(int32_t argc, char* argv[]) {
     setpriority(PRIO_PROCESS, 0, -20);
 
     if (role == Role::SENDER) {
-        SerialSender sender(baudrate);
+        SerialSender sender(baudrate, debug);
         for (; ;) {
             std::string message;
             std::cout << "Enter message: ";
@@ -289,7 +304,7 @@ int32_t main(int32_t argc, char* argv[]) {
             sender.send(message);
         }
     } else {
-        SerialReceiver receiver(baudrate);
+        SerialReceiver receiver(baudrate, debug);
         receiver.receive();
     }
 
