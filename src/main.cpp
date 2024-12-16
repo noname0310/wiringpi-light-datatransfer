@@ -53,7 +53,7 @@ class SerialSender {
     bool debug;
 
 public:
-    SerialSender(int32_t baudrate = 9, bool debug) : delay(ONE_SECOND_IN_MICROSECONDS / baudrate, debug(debug)) { }
+    SerialSender(int32_t baudrate = 9, bool debug = false) : delay(ONE_SECOND_IN_MICROSECONDS / baudrate, debug(debug)) { }
 
     void send(const std::string& message) {
         if (debug) {
@@ -156,7 +156,7 @@ class SerialReceiver {
     bool debug;
 
 public:
-    SerialReceiver(int32_t baudrate = 9, bool debug) : delay(ONE_SECOND_IN_MICROSECONDS / baudrate), debug(debug) { }
+    SerialReceiver(int32_t baudrate = 9, bool debug = false) : delay(ONE_SECOND_IN_MICROSECONDS / baudrate), debug(debug) { }
 
     void receive() {
         for (; ;) {
